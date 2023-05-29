@@ -16,7 +16,7 @@ import Task from "../components/Task";
 const gates = [
     {
         code: "gate_1",
-        name: "Cổng Parabol huyền thoại",
+        name: "Cổng Parabol",
         icon: require(`./../assets/gate_1.jpeg`),
     },
     {
