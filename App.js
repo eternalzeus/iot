@@ -1,80 +1,165 @@
 import Paho from "paho-mqtt";
-
 import { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import {
-    StyleSheet,
-    Text,
-    Button,
-    View,
-    TouchableOpacity,
-    ScrollView,
-} from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, Button, View, TextInput, FlatList, Dimensions  } from 'react-native';
+import MapView,{Marker} from 'react-native-maps';
+import * as Location from 'expo-location';
 
-import Task from "./components/Task";
-import styles from "./App.components.style";
-import home from "./screens/home";
-import info from "./screens/info";
-
-import AppNavigator from "./AppNavigator";
-const Stack = createNativeStackNavigator();
+var message="yes"; 
 
 client = new Paho.Client(
-    "broker.hivemq.com",
-    Number(8000),
-    `mqtt-async-test-${parseInt(Math.random() * 100)}`
+  "broker.hivemq.com",
+  Number(8000),
+  `mqtt-async-test-${parseInt(Math.random() * 100)}`
 );
 
-export default function App() {
-    useEffect(() => {
-        client.connect({
-            onSuccess: () => {},
-            onFailure: () => {
-                console.log("Failed to connect!");
-            },
-        });
-    }, []);
+// client.onConnectionLost = onConnectionLost;
 
-    function changeValue(c) {
-        const message = new Paho.Message((value + 1).toString());
-        message.destinationName = "mqtt-async-test/value";
-        c.send(message);
-    }
-    return (
-        <NavigationContainer>
-            <Stack.Navigator
-                screenOptions={{
-                    headerShown: false,
-                }}
-            >
-                <Stack.Screen name="home" component={home} />
-                <Stack.Screen name="info" component={info} />
-            </Stack.Navigator>
-        </NavigationContainer>
-    );
-    return home();
 
-    // {/* <NavigationContainer>
-    // {/* <AppNavigator.Navigator initialRouteName="Home">
-    // <AppNavigator.Screen name="Home" component={home} />
-    // <AppNavigator.Screen name="Details" component={DetailsScreen} />
-    // </AppNavigator.Navigator> */}
+// connect the client
+client.connect({onSuccess:onConnect});
 
-    // <View style={styles.container}>
-    // <View style = {styles.body}>
-    // <Text style = {styles.header}> Mật độ giao thông tại các điểm </Text>
-    // <ScrollView style = {styles.items}>
-    // <Task></Task>
-    // <Task></Task>
-    // <Task></Task>
-    // <Task></Task>
-    // </ScrollView>
-    // </View>
-    // {/* {/* <Text>Value is: {value}</Text> */}
-    // {/* // <Button onPress={() => { changeValue(client);} } title="Press Me"/> */}
-    //  {/* <StatusBar style="auto" /> */} */}
-    // </View>
-    //  {/* </NavigationContainer> */}
+// called when the client connects
+function onConnect() {
+  console.log("onConnect");
+  client.subscribe("World");
+  message = new Paho.Message("Hola");
+  message.destinationName = "World";
+  client.send(message);
 }
+// called when the client loses its connection
+// function onConnectionLost(responseObject) {
+//   if (responseObject.errorCode !== 0) {
+//     console.log("onConnectionLost:"+responseObject.errorMessage);
+//   }
+// }
+
+export default function App() {
+  a= 21.64837744;
+    b= 106.03773355;
+    // const messageArr = ["0", "0", "0", "0", "0"];
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 28.4396093,
+    longitude: 104.1866361,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+  const userLocation = async()=>{
+    let{status} = await Location.requestForegroundPermissionsAsync();
+    if(status !== 'granted'){
+      setErrorMsg('Permission denied!');
+    }
+    let location = await Location.getCurrentPositionAsync({enableHighAccuracy: true});
+    setMapRegion({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+    console.log("My Location:"+location.coords.latitude,location.coords.longitude);
+  }
+
+  const clickHandler = () => {  // Update STATE
+    setMapRegion({
+      latitude: parseFloat(value.la),
+      longitude: parseFloat(value.long),
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    })
+  };
+  const [value, setValue] = useState({
+    pm25: null,
+    mq7: null,
+    gas: null,
+    la: null,
+    long: null
+  });
+  useEffect(()=>{
+    userLocation();
+  },[])
+  client.onMessageArrived = onMessageArrived;
+  function onMessageArrived(message) {
+    console.log("Message received:"+message.payloadString);
+    // setName(message.payloadString);
+    const messageText = message.payloadString;
+    const messageArr = messageText.split("_");
+    setValue({
+      pm25: messageArr[0],
+      mq7: messageArr[1],
+      gas: messageArr[2],
+      la: messageArr[3],
+      long: messageArr[4],
+    });
+    // a=messageArr[3]*1;
+    // b=messageArr[4]*1;
+    // setMapRegion({
+    //   latitude: parseFloat(messageArr[3]),
+    //   longitude: parseFloat(messageArr[4]),
+    //   latitudeDelta: 0.0922,
+    //   longitudeDelta: 0.0421,
+    // })
+    
+    console.log("pm2.5:"+messageArr[0]+" mq7:"+messageArr[1]+ " gas:"+messageArr[2]+" latitude:"+messageArr[3]+" long:"+messageArr[4]);
+  
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* <Text></Text>
+      <Text>Pm2.5: {value.pm25}</Text>
+      <Text>Mq7: {value.mq7}</Text>
+      <Text>Gas: {value.gas}</Text>
+      <Text>Latitude: {mapRegion.latitude}</Text>
+      <Text>Longtitude: {mapRegion.longitude}</Text> */}
+      <MapView style={styles.map} 
+        region = {mapRegion}
+      >
+        <Marker coordinate={mapRegion} title="Marker" />
+      </MapView>
+      {/* <Button title="Get Location" onPress={userLocation}/> */}
+      <Button title="Get Location" onPress={clickHandler}/>
+    </View>
+    
+  );
+}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor:'fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  map: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  header: {
+    backgroundColor: 'pink',
+    padding: 20,
+  },
+  body: {
+    backgroundColor: 'yellow',
+    padding: 20,
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  buttonContainer: {
+    marginTop: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#777',
+    padding: 8,
+    margin: 10,
+    width: 200,
+  },
+  item: {
+    flex: 1,
+    marginHorizontal: 10,
+    marginTop: 24,
+    padding: 30,
+    backgroundColor: 'pink',
+    fontSize: 24,
+  },
+});
