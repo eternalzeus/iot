@@ -31,34 +31,13 @@ client = new Paho.Client(
 
 // connect the client
 client.connect({onSuccess:onConnect});
-function Low(){
-  return(
-  <Text style = {{color: 'green'}}>
-    {'Low'}
-  </Text>
-  )
-}
-function Med(){
-  return(
-    <Text style = {{color: 'yellow'}}>
-      {'Med'}
-    </Text>
-    )
-}
-function High(){
-  return(
-    <Text style = {{color: 'red'}}>
-      {'High'}
-    </Text>
-    )
-}
 
 // called when the client connects
 function onConnect() {
   console.log("onConnect");
-  client.subscribe("World");
+  client.subscribe("nahm");
   message = new Paho.Message("1.05_3.50_4.50_21.648377_106.037733");
-  message.destinationName = "World";
+  message.destinationName = "nahm";
   client.send(message);
 }
 export default function Home({ navigation }) {
@@ -68,10 +47,8 @@ export default function Home({ navigation }) {
     
   }, []);
     const pressHandler = () => {
-        //navigation.navigate('ReviewDetails');
         navigation.push('Map');
     }
-
     const [value, setValue] = useState({
       pm25: 0,
       mq7: 1,
@@ -86,18 +63,12 @@ export default function Home({ navigation }) {
       time_two: '10:12',
       time_three: '10:13'
     });
-    const [sum, setSum] = useState(0);
-    const [SumTestLow, setSumLow] = useState(null);
-    const [SumTestMed, setSumMed] = useState(null);
-    const [SumTestHigh, setSumHigh] = useState(null);
     
     client.onMessageArrived = onMessageArrived;
 
     function onMessageArrived(message) { 
 
-      console.log("Message received:"+message.payloadString);
-      // setName(message.payloadString);
-      
+      console.log("Message received:"+message.payloadString);      
       const messageText = message.payloadString;
       const messageArr = messageText.split("_");
       setValue({
@@ -111,56 +82,44 @@ export default function Home({ navigation }) {
       setCurrentDate(
         hours + ':' + min + ':' + sec
       );
-      // setSum(messageArr[0]+messageArr[1]+messageArr[2]);
-      // console.log (sum);
       setChart({
         one: chart.two,
         two: chart.three,
-        three: parseFloat(messageArr[0])+parseFloat(messageArr[1])+parseFloat(messageArr[2]),
+        three: parseFloat((messageArr[0]))+parseFloat(messageArr[1])+parseFloat(messageArr[2]),
         time_one: chart.time_two,
         time_two: chart.time_three,
         time_three: currentDate
-      })
-      console.log("pm2.5:"+value.pm25+" mq7:"+value.mq7+ " gas:"+value.gas+" latitude:"+messageArr[3]+" long:"+messageArr[4]);
-      // Calculate();
+      });
+      
+      console.log("pm2.5:"+messageArr[0]+" mq7:"+messageArr[1]+ " gas:"+messageArr[2]+" latitude:"+messageArr[3]+" long:"+messageArr[4]);
     }
     function Calculate(){
-      
-      setSum(value.pm25 + value.mq7 + value.gas);
-          if(sum<10){
-            setSumLow(123);
-            setSumMed('');
-            setSumHigh('');
-          }
-          else if(sum>=10 && sum <= 15){
-            setSumMed(123);
-            setSumLow('');
-            setSumHigh('');
-          }
-          else {
-            setSumHigh(123);
-            setSumLow('');
-            setSumMed('');
-          }
-          
-          return(
-            <Text>
-              {sum}
-            </Text>
-          )
+      if(chart.three<10){
+        return(
+          <Text>1</Text>
+        )
+      }
+      else if(chart.three>=10 && chart.three <= 20){
+        return(
+          <Text>2</Text>
+        )
+      }
+      else {
+        return(
+          <Text>3</Text>
+        )
+      }
     }
-    return (
+    return (  
       <View style={globalStyles.container}>
         <Text style={globalStyles.titleText}>Mức cảnh báo:  </Text>
-        {SumTestLow && <Low/>}
-        {SumTestMed && <Med/>}
-        {SumTestHigh && <High/>}
         <Calculate/>
-        <Text>{currentDate}</Text>
+        {/* <Text>{currentDate}<  /Text> */}
         <Text style={globalStyles.titleText}>Chỉ số ô nhiễm: </Text>
         <Text>Pm2.5: {value.pm25}</Text>
         <Text>Mq7: {value.mq7}</Text>
         <Text>Gas: {value.gas}</Text>
+        <Text>{value.pm25+value.mq7+value.gas}</Text>
         <Button title='Vị trí cảnh báo' onPress={pressHandler} 
         color="#015841"/>
         <LineChart
