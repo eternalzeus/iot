@@ -8,7 +8,16 @@ import {
     View,
     TouchableOpacity,
     ScrollView,
+    Dimensions
 } from "react-native";
+import {
+  LineChart,
+  BarChart,
+  PieChart,
+  ProgressChart,
+  ContributionGraph,
+  StackedBarChart
+} from "react-native-chart-kit";
 import Task from "../components/Task";
 import { globalStyles } from '../styles/global';
 // import styles from "../App.components.style";
@@ -20,9 +29,6 @@ client = new Paho.Client(
   `mqtt-async-test-${parseInt(Math.random() * 100)}`
 );
 
-// client.onConnectionLost = onConnectionLost;
-
-
 // connect the client
 client.connect({onSuccess:onConnect});
 function Low(){
@@ -31,7 +37,6 @@ function Low(){
     {'Low'}
   </Text>
   )
-  
 }
 function Med(){
   return(
@@ -57,16 +62,30 @@ function onConnect() {
   client.send(message);
 }
 export default function Home({ navigation }) {
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    
+  }, []);
     const pressHandler = () => {
         //navigation.navigate('ReviewDetails');
         navigation.push('Map');
     }
+
     const [value, setValue] = useState({
       pm25: 0,
       mq7: 1,
       gas: 2,
     });
 
+    const [chart, setChart] = useState({
+      one: 0,
+      two: 1,
+      three: 2,
+      time_one: '10:10',
+      time_two: '10:12',
+      time_three: '10:13'
+    });
     const [sum, setSum] = useState(0);
     const [SumTestLow, setSumLow] = useState(null);
     const [SumTestMed, setSumMed] = useState(null);
@@ -86,16 +105,28 @@ export default function Home({ navigation }) {
         mq7: parseFloat(messageArr[1]),
         gas: parseFloat(messageArr[2]),
       });
+      var hours = new Date().getHours(); //Current Hours
+      var min = new Date().getMinutes(); //Current Minutes
+      var sec = new Date().getSeconds(); //Current Seconds
+      setCurrentDate(
+        hours + ':' + min + ':' + sec
+      );
       // setSum(messageArr[0]+messageArr[1]+messageArr[2]);
       // console.log (sum);
-      
+      setChart({
+        one: chart.two,
+        two: chart.three,
+        three: parseFloat(messageArr[0])+parseFloat(messageArr[1])+parseFloat(messageArr[2]),
+        time_one: chart.time_two,
+        time_two: chart.time_three,
+        time_three: currentDate
+      })
       console.log("pm2.5:"+value.pm25+" mq7:"+value.mq7+ " gas:"+value.gas+" latitude:"+messageArr[3]+" long:"+messageArr[4]);
       // Calculate();
     }
     function Calculate(){
       
       setSum(value.pm25 + value.mq7 + value.gas);
-      
           if(sum<10){
             setSumLow(123);
             setSumMed('');
@@ -125,13 +156,53 @@ export default function Home({ navigation }) {
         {SumTestMed && <Med/>}
         {SumTestHigh && <High/>}
         <Calculate/>
-        <Text></Text>
+        <Text>{currentDate}</Text>
         <Text style={globalStyles.titleText}>Chỉ số ô nhiễm: </Text>
         <Text>Pm2.5: {value.pm25}</Text>
         <Text>Mq7: {value.mq7}</Text>
         <Text>Gas: {value.gas}</Text>
         <Button title='Vị trí cảnh báo' onPress={pressHandler} 
         color="#015841"/>
+        <LineChart
+            data={{
+              labels: [chart.time_one, chart.time_two, chart.time_three],
+              datasets: [
+                {
+                  data: [
+                    chart.one,
+                    chart.two,
+                    chart.three
+                  ]
+                }
+              ]
+            }}
+            width={Dimensions.get("window").width} // from react-native
+            height={220}
+            yAxisLabel=""
+            yAxisSuffix=""
+            yAxisInterval={1} // optional, defaults to 1
+            chartConfig={{
+              backgroundColor: "#800080",
+              backgroundGradientFrom: "#800080",
+              backgroundGradientTo: "#ffa726",
+              decimalPlaces: 2, // optional, defaults to 2dp
+              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              style: {
+                borderRadius: 16
+              },
+              propsForDots: {
+                r: "6",
+                strokeWidth: "2",
+                stroke: "#ffa726"
+              }
+            }}
+            bezier
+            style={{
+              marginVertical: 8,
+              borderRadius: 16
+            }}
+          />
     </View>
     );
 }
